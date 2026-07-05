@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Document Agent</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <!-- Ambient background glow blobs -->
+  <div class="glow-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-container">
+          <!-- Sparkle star SVG icon -->
+          <svg class="header-logo-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9.813 15.904L9 21l-.813-5.096L3 15l5.096-.813L9 9l.813 5.096L15 15l-5.187.904zM18.007 7.007L17.5 10l-.507-2.993L14 6.5l2.993-.507L17.5 3l.507 2.993L21 6.5l-2.993.507z" />
+          </svg>
+        </div>
+        <div>
+          <h1>Autonomous Document Agent</h1>
+          <p class="subtitle">Plan, write, and refine professional documents — automatically.</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="ai-badge">
+          <svg class="badge-sparkle-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 21.5L8.25 16.25L3 15.5L8.25 14.75L9 9.5L9.75 14.75L15 15.5L9.75 16.25L9 21.5ZM18.5 10.5L18.15 7.85L15.5 7.5L18.15 7.15L18.5 4.5L18.85 7.15L21.5 7.5L18.85 7.85L18.5 10.5Z" />
+          </svg>
+          <span>AI Powered</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="app-grid">
+      
+      <!-- Input Card -->
+      <main class="card input-card">
+        <h2>
+          <svg class="title-icon icon-purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg>
+          <span>Request Document</span>
+        </h2>
+        <form id="agent-form">
+          <div class="form-group">
+            <label for="request-input">Describe the document you need in detail:</label>
+            <textarea 
+              id="request-input" 
+              placeholder="Describe what you want to write..." 
+              rows="8" 
+              required
+            ></textarea>
+          </div>
+          
+          <!-- Inline Error Container -->
+          <div id="error-message" class="error-container hidden"></div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            <span>Generate Document</span>
+          </button>
+        </form>
+      </main>
+
+      <!-- Status and Output Card -->
+      <aside class="card status-card">
+        
+        <!-- Idle State -->
+        <div id="state-idle" class="state-view">
+          <div class="idle-placeholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <p>Ready to generate. Enter your request and click "Generate Document" to start the multi-agent pipeline.</p>
+          </div>
+        </div>
+
+        <!-- Progress State -->
+        <div id="state-processing" class="state-view hidden">
+          <h2>
+            <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+            <span>Agent Pipeline Execution Plan</span>
+          </h2>
+          <div class="progress-list">
+            <div class="progress-step" id="step-understood">
+              <div class="step-indicator"></div>
+              <div class="step-text">✔ Request Understood</div>
+            </div>
+            <div class="progress-step" id="step-plan-created">
+              <div class="step-indicator"></div>
+              <div class="step-text">✔ Plan Created</div>
+            </div>
+            <div class="progress-step" id="step-content-generated">
+              <div class="step-indicator"></div>
+              <div class="step-text">✔ Content Generated</div>
+            </div>
+            <div class="progress-step" id="step-review-complete">
+              <div class="step-indicator"></div>
+              <div class="step-text">✔ Self Review Complete</div>
+            </div>
+            <div class="progress-step" id="step-docx-created">
+              <div class="step-indicator"></div>
+              <div class="step-text">✔ DOCX Created</div>
+            </div>
+          </div>
+          <div class="spinner-container">
+            <div class="spinner"></div>
+            <span class="spinner-label">Agent is executing task chain...</span>
+          </div>
+
+          <!-- Live Metrics Grid -->
+          <div class="result-section metrics-section" style="margin-top: 1rem;">
+            <h3>Live Execution Times</h3>
+            <div class="metrics-grid">
+              
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Planning</span>
+                  <span class="metric-val"><strong id="live-time-planning">0.00</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 0M8 21.14a8 8 0 0110.43 0M12 14v2m-3 3h6m-10-8.24c0-3 2-5 5-5s5 2 5 5v3.19a4 4 0 01-1.07 2.7l-1.37 1.48a1 1 0 01-.71.33H10.15a1 1 0 01-.71-.33l-1.37-1.48a4 4 0 01-1.07-2.7V10.76z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Execution</span>
+                  <span class="metric-val"><strong id="live-time-execution">0.00</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-magenta">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Reflection</span>
+                  <span class="metric-val"><strong id="live-time-reflection">0.00</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Document</span>
+                  <span class="metric-val"><strong id="live-time-document">0.00</strong>s</span>
+                </div>
+              </div>
+
+            </div>
+            <div class="live-total-bar">
+              Total Elapsed: <strong id="live-time-total">0.00</strong> sec
+            </div>
+          </div>
+        </div>
+
+        <!-- Result State -->
+        <div id="state-result" class="state-view hidden">
+          <!-- Success Message Banner -->
+          <div class="success-banner">
+            <div class="success-banner-left">
+              <div class="success-check-badge">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <span class="success-banner-title">Document generated successfully</span>
+                <span class="success-banner-subtitle">Execution completed in <span id="res-total-time">-</span> seconds.</span>
+              </div>
+            </div>
+            <div class="success-banner-right">
+              <svg class="banner-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Document Callout (Type + Assumptions) -->
+          <div class="callout-box">
+            <div class="callout-header">
+              <span class="badge" id="res-doc-type">document type</span>
+              <strong id="res-title">Document Title</strong>
+            </div>
+            <div class="callout-body">
+              <strong>Assumptions Made:</strong>
+              <ul id="res-assumptions"></ul>
+            </div>
+          </div>
+
+          <!-- Processing Times Grid -->
+          <div class="result-section metrics-section">
+            <h3>
+              <svg class="title-icon icon-purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Execution Metrics</span>
+            </h3>
+            <div class="metrics-grid">
+              
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Planning</span>
+                  <span class="metric-val"><strong id="time-planning">-</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 0M8 21.14a8 8 0 0110.43 0M12 14v2m-3 3h6m-10-8.24c0-3 2-5 5-5s5 2 5 5v3.19a4 4 0 01-1.07 2.7l-1.37 1.48a1 1 0 01-.71.33H10.15a1 1 0 01-.71-.33l-1.37-1.48a4 4 0 01-1.07-2.7V10.76z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Execution</span>
+                  <span class="metric-val"><strong id="time-execution">-</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-magenta">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Reflection</span>
+                  <span class="metric-val"><strong id="time-reflection">-</strong>s</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-icon-wrap icon-green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div class="metric-content">
+                  <span class="metric-name">Document</span>
+                  <span class="metric-val"><strong id="time-document">-</strong>s</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Agent Task List -->
+          <div class="result-section">
+            <h3>
+              <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Agent Task List</span>
+            </h3>
+            <ul id="res-task-list" class="task-checklist"></ul>
+          </div>
+
+          <!-- Document Outline -->
+          <div class="result-section">
+            <h3>
+              <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              <span>Document Outline</span>
+            </h3>
+            <ol id="res-plan-list" class="plan-list"></ol>
+          </div>
+
+          <!-- Self Check Panel -->
+          <div class="result-section self-check-panel">
+            <h3>
+              <svg class="title-icon icon-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Agent Self-Check Review</span>
+            </h3>
+            <div class="self-check-container">
+              <div class="self-check-icon">✓</div>
+              <div class="self-check-details">
+                <strong>Review Notes / Corrections:</strong>
+                <ul id="res-review-notes"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Button Area -->
+          <div class="download-action-container">
+            <div class="file-name-display">File: <span id="res-file-name">-</span></div>
+            <div class="action-buttons-row">
+              <!-- View Button -->
+              <a href="#" id="res-view-btn" class="btn btn-secondary btn-large">
+                <!-- Eye Icon -->
+                <svg class="view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Preview Document</span>
+              </a>
+              <!-- Download Button -->
+              <a href="#" id="res-download-btn" class="btn btn-success btn-large" download>
+                <!-- Word Icon -->
+                <svg class="word-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Download Word Document</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    <!-- Small Footer -->
+    <footer class="app-footer">
+      <p>Powered by FastAPI + Groq + python-docx</p>
+    </footer>
+  </div>
+</body>
+</html>
