@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Autonomous Document Agent</title>
+  <title>RAG-Powered Autonomous Document Agent</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="/static/app.js" defer></script>
@@ -26,8 +26,8 @@
           </svg>
         </div>
         <div>
-          <h1>Autonomous Document Agent</h1>
-          <p class="subtitle">Plan, write, and refine professional documents — automatically.</p>
+          <h1>RAG-Powered Autonomous Document Agent</h1>
+          <p class="subtitle">Plan, write, and ground professional documents with retrieved user knowledge.</p>
         </div>
       </div>
       <div class="header-right">
@@ -35,7 +35,7 @@
           <svg class="badge-sparkle-icon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M9 21.5L8.25 16.25L3 15.5L8.25 14.75L9 9.5L9.75 14.75L15 15.5L9.75 16.25L9 21.5ZM18.5 10.5L18.15 7.85L15.5 7.5L18.15 7.15L18.5 4.5L18.85 7.15L21.5 7.5L18.85 7.85L18.5 10.5Z" />
           </svg>
-          <span>AI Powered</span>
+          <span>RAG AI</span>
         </div>
       </div>
     </header>
@@ -56,16 +56,49 @@
             <label for="request-input">Describe the document you need in detail:</label>
             <textarea 
               id="request-input" 
-              placeholder="Describe what you want to write..." 
-              rows="8" 
+              placeholder="E.g., Create a project plan for launching a mobile banking app in 3 months..." 
+              rows="5" 
               required
             ></textarea>
+          </div>
+
+          <!-- Optional Grounding Source Context -->
+          <div class="source-knowledge-box">
+            <div class="source-header">
+              <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+              <span>Supporting Knowledge / Context (Optional)</span>
+            </div>
+            
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <label for="source-text-input">Paste supporting text or notes:</label>
+              <textarea 
+                id="source-text-input" 
+                placeholder="Optional: Enter background information, project constraints, budgets, or meeting notes..." 
+                rows="4"
+              ></textarea>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.75rem;">
+              <label for="source-files-input">Upload supporting documents (.txt, .md, .pdf, .docx):</label>
+              <div class="file-upload-wrapper">
+                <input 
+                  type="file" 
+                  id="source-files-input" 
+                  accept=".txt,.md,.pdf,.docx" 
+                  multiple 
+                  class="file-input"
+                />
+                <div id="file-list-preview" class="file-list-preview"></div>
+              </div>
+            </div>
           </div>
           
           <!-- Inline Error Container -->
           <div id="error-message" class="error-container hidden"></div>
 
-          <button type="submit" id="submit-btn" class="btn btn-primary">
+          <button type="submit" id="submit-btn" class="btn btn-primary" style="margin-top: 0.5rem;">
             <span>Generate Document</span>
           </button>
         </form>
@@ -80,7 +113,7 @@
             <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
-            <p>Ready to generate. Enter your request and click "Generate Document" to start the multi-agent pipeline.</p>
+            <p>Ready to generate. Enter your request, optionally attach source documents or notes, and click "Generate Document".</p>
           </div>
         </div>
 
@@ -95,11 +128,11 @@
           <div class="progress-list">
             <div class="progress-step" id="step-understood">
               <div class="step-indicator"></div>
-              <div class="step-text">✔ Request Understood</div>
+              <div class="step-text">✔ Request & Knowledge Understood</div>
             </div>
             <div class="progress-step" id="step-plan-created">
               <div class="step-indicator"></div>
-              <div class="step-text">✔ Plan Created</div>
+              <div class="step-text">✔ Grounded Plan Created</div>
             </div>
             <div class="progress-step" id="step-content-generated">
               <div class="step-indicator"></div>
@@ -107,7 +140,7 @@
             </div>
             <div class="progress-step" id="step-review-complete">
               <div class="step-indicator"></div>
-              <div class="step-text">✔ Self Review Complete</div>
+              <div class="step-text">✔ Grounded Self Review Complete</div>
             </div>
             <div class="progress-step" id="step-docx-created">
               <div class="step-indicator"></div>
@@ -211,6 +244,28 @@
               <strong>Assumptions Made:</strong>
               <ul id="res-assumptions"></ul>
             </div>
+          </div>
+
+          <!-- Grounded Sources Attached Panel -->
+          <div id="res-sources-section" class="result-section hidden">
+            <h3>
+              <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+              <span>Grounded Knowledge Sources</span>
+            </h3>
+            <ul id="res-sources-list" class="sources-list"></ul>
+          </div>
+
+          <!-- Retrieved Knowledge (RAG Chunks Preview & Similarity Scores) -->
+          <div id="res-retrieved-knowledge-section" class="result-section hidden">
+            <h3>
+              <svg class="title-icon icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <span>Retrieved Knowledge (Top-K Chunks & Similarity)</span>
+            </h3>
+            <div id="res-retrieved-knowledge-list" class="retrieved-knowledge-list"></div>
           </div>
 
           <!-- Processing Times Grid -->
@@ -343,7 +398,7 @@
 
     <!-- Small Footer -->
     <footer class="app-footer">
-      <p>Powered by FastAPI + Groq + python-docx</p>
+      <p>Powered by FastAPI + Groq + pypdf + python-docx</p>
     </footer>
   </div>
 </body>

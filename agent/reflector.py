@@ -1,7 +1,7 @@
 import json
 from agent.llm_client import call_llm
 
-def reflect_and_revise(user_request: str, plan: dict, draft: dict) -> dict:
+def reflect_and_revise(user_request: str, plan: dict, draft: dict, source_context: str = "") -> dict:
     """
     Review the full draft and revise sections that contain issues flagged by the reviewer.
     
@@ -18,17 +18,20 @@ def reflect_and_revise(user_request: str, plan: dict, draft: dict) -> dict:
         draft_content_str += f"\nHeading: {heading}\nContent:\n{content}\n"
 
     system_prompt = (
-        "You are a critical document review agent.\n"
-        "Your task is to analyze the full draft of the generated document and determine if it meets the user request.\n\n"
-        "Specifically, you must check for and report the following problems:\n"
-        "- Missing requested sections (any section planned or explicitly requested that is absent)\n"
-        "- Missing assumptions (necessary assumptions that were not documented)\n"
-        "- Empty sections (sections with headings but no actual content or body text)\n"
-        "- Inconsistent content (contradictory dates, timelines, or specifications between sections)\n"
-        "- Off-topic content (unrelated historical background or fluff not requested by the user)\n\n"
+        "You are a critical document review agent performing dual-stage quality and grounding review.\n"
+        "Your task is to analyze the full draft of the generated document and determine if it meets the user request and adheres strictly to the retrieved facts.\n\n"
+        "REVIEW CRITERIA:\n"
+        "A. Normal Document Quality Review:\n"
+        "- Missing requested sections or empty sections.\n"
+        "- Inconsistent content (contradictory dates, timelines, or specifications between sections).\n"
+        "- Off-topic content (unrelated historical fluff not requested by the user).\n\n"
+        "B. Grounding & Factual Integrity Review:\n"
+        "- Contradictions: Any claim, technology, date, or number that contradicts the provided Source Context.\n"
+        "- Unsupported Claims: Any claim that a company/product currently uses technologies (e.g. Kafka, Redis, Kubernetes) not in the source context.\n"
+        "- Invented Missing Information: If the user requested specific details (e.g. CEO name, revenue, employee count) that are NOT in the source context, the draft must NOT invent names or numbers. It must explicitly state that the information was not provided.\n\n"
         "If any section contains one of these issues, list them in 'issues_found' prefixed with the exact "
-        "heading of that section in square brackets, for example: '[1. Introduction] Contained off-topic historical background.'\n\n"
-        "CRITICAL FOR SPEED: Be highly selective. Only set needs_revision to true if there is a severe, critical issue. "
+        "heading of that section in square brackets, for example: '[1. Introduction] Contained invented CEO name not present in source context.'\n\n"
+        "CRITICAL FOR SPEED: Be selective. Only set needs_revision to true if there is a severe factual or grounding issue, or missing section. "
         "Otherwise, return needs_revision = false to save processing time.\n\n"
         "You must respond with a JSON object with this exact shape:\n"
         "{\n"
@@ -41,9 +44,13 @@ def reflect_and_revise(user_request: str, plan: dict, draft: dict) -> dict:
         f"User Original Request: {user_request}\n"
         f"Document Type: {plan.get('document_type', 'business report')}\n"
         f"Document Title: {plan.get('title', 'Untitled Document')}\n"
-        f"Assumptions: {plan.get('assumptions', [])}\n\n"
-        f"--- Full Draft to Review ---\n{draft_content_str}"
+        f"Assumptions: {plan.get('assumptions', [])}\n"
     )
+
+    if source_context and source_context.strip():
+        user_prompt += f"\n--- Retrieved Source Knowledge / Grounding Context ---\n{source_context.strip()}\n"
+
+    user_prompt += f"\n--- Full Draft to Review ---\n{draft_content_str}"
 
     issues_found = []
     needs_revision = False
@@ -103,9 +110,15 @@ def reflect_and_revise(user_request: str, plan: dict, draft: dict) -> dict:
             revision_user_prompt = (
                 f"Original User Request: {user_request}\n"
                 f"Section Heading: {heading}\n"
-                f"Identified Section Issues: {issues_str}\n\n"
-                f"Original Section Content:\n{content}\n\n"
-                f"Please rewrite this section to fix the issues, ensuring all details are professional and robust."
+                f"Identified Section Issues: {issues_str}\n"
+            )
+
+            if source_context and source_context.strip():
+                revision_user_prompt += f"\n--- Source Knowledge / Grounding Context ---\n{source_context.strip()}\n"
+
+            revision_user_prompt += (
+                f"\nOriginal Section Content:\n{content}\n\n"
+                f"Please rewrite this section to fix the issues, ensuring all details are grounded, professional, and robust."
             )
             
             try:
@@ -132,11 +145,10 @@ class Reflector:
     def __init__(self, llm_client=None):
         self.llm_client = llm_client
 
-    def reflect(self, content: dict) -> dict:
+    def reflect(self, content: dict, source_context: str = "") -> dict:
         """
         Offers backward compatibility with the skeleton call.
         """
-        # Fallback if called with old format
         user_request = "Generate document"
         plan = {"title": "Document Draft", "document_type": "proposal"}
         draft = {
@@ -144,4 +156,4 @@ class Reflector:
             "document_type": "proposal",
             "sections": [{"heading": "1. Overview", "content": content.get("draft", "placeholder")}]
         }
-        return reflect_and_revise(user_request, plan, draft)
+        return reflect_and_revise(user_request, plan, draft, source_context=source_context)

@@ -2,3 +2,13 @@ venv/
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
+outputs/*.docx
+*.docx
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.DS_Store
+Thumbs.db

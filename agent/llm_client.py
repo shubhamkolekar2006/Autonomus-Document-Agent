@@ -137,8 +137,9 @@ def call_llm(system_prompt: str, user_prompt: str, json_mode: bool = False) -> s
     messages.append({"role": "user", "content": user_prompt})
 
     # Request parameters
+    model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     kwargs = {
-        "model": "llama-3.3-70b-versatile",
+        "model": model_name,
         "messages": messages,
     }
     if json_mode:

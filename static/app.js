@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('agent-form');
   const requestInput = document.getElementById('request-input');
+  const sourceTextInput = document.getElementById('source-text-input');
+  const sourceFilesInput = document.getElementById('source-files-input');
+  const fileListPreview = document.getElementById('file-list-preview');
   const submitBtn = document.getElementById('submit-btn');
   const errorMsg = document.getElementById('error-message');
 
@@ -19,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const resDocType = document.getElementById('res-doc-type');
   const resTitle = document.getElementById('res-title');
   const resAssumptions = document.getElementById('res-assumptions');
+  const resSourcesSection = document.getElementById('res-sources-section');
+  const resSourcesList = document.getElementById('res-sources-list');
+  const resRetrievedKnowledgeSection = document.getElementById('res-retrieved-knowledge-section');
+  const resRetrievedKnowledgeList = document.getElementById('res-retrieved-knowledge-list');
   const resPlanList = document.getElementById('res-plan-list');
   const resTaskList = document.getElementById('res-task-list');
   const resReviewNotes = document.getElementById('res-review-notes');
@@ -56,6 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentDownloadUrl = null;
   let currentDocTitle = "";
+
+  // Render selected file tags
+  if (sourceFilesInput) {
+    sourceFilesInput.addEventListener('change', () => {
+      fileListPreview.innerHTML = '';
+      if (sourceFilesInput.files && sourceFilesInput.files.length > 0) {
+        Array.from(sourceFilesInput.files).forEach(file => {
+          const tag = document.createElement('span');
+          tag.className = 'file-tag';
+          tag.innerText = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+          fileListPreview.appendChild(tag);
+        });
+      }
+    });
+  }
 
   function showError(msg) {
     errorMsg.innerText = msg;
@@ -317,6 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestText = requestInput.value.trim();
     if (!requestText) return;
 
+    const sourceText = sourceTextInput ? sourceTextInput.value.trim() : '';
+    const files = (sourceFilesInput && sourceFilesInput.files) ? Array.from(sourceFilesInput.files) : [];
+
     // UI State: disabled inputs, show processing panel
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Processing Agent...</span>';
@@ -328,18 +353,38 @@ document.addEventListener('DOMContentLoaded', () => {
     startProgressSimulation();
 
     try {
-      const response = await fetch('/agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ request: requestText })
-      });
+      let response;
+      
+      // If files are attached or direct text is provided, use FormData (multipart/form-data)
+      if (files.length > 0 || sourceText) {
+        const formData = new FormData();
+        formData.append('request', requestText);
+        if (sourceText) {
+          formData.append('source_text', sourceText);
+        }
+        files.forEach(file => {
+          formData.append('files', file);
+        });
+
+        response = await fetch('/agent', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // Simple JSON request
+        response = await fetch('/agent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ request: requestText })
+        });
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        const msg = data.detail || 'LLM unavailable. Please try again in a few seconds.';
+        const msg = data.detail || 'Failed to process document request.';
         throw new Error(msg);
       }
 
@@ -359,7 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Populate Result Title & Document Type
         resDocType.innerText = data.document_type;
-        // Extracts the display title name from message
         resTitle.innerText = data.message.replace("Successfully planned, drafted, revised, and generated the document ", "").replace(".", "").replace(/'/g, "");
         
         // Assumptions list
@@ -374,6 +418,43 @@ document.addEventListener('DOMContentLoaded', () => {
           const li = document.createElement('li');
           li.innerText = 'No assumptions were required.';
           resAssumptions.appendChild(li);
+        }
+
+        // Grounded Sources list
+        if (resSourcesSection && resSourcesList) {
+          resSourcesList.innerHTML = '';
+          if (data.sources && data.sources.length > 0) {
+            resSourcesSection.classList.remove('hidden');
+            data.sources.forEach(s => {
+              const li = document.createElement('li');
+              li.innerHTML = `<span class="source-badge">${s.source_type}</span> <strong>${s.source_name}</strong> (${s.content.length} characters)`;
+              resSourcesList.appendChild(li);
+            });
+          } else {
+            resSourcesSection.classList.add('hidden');
+          }
+        }
+
+        // Retrieved Knowledge (RAG Chunks & Similarity Scores)
+        if (resRetrievedKnowledgeSection && resRetrievedKnowledgeList) {
+          resRetrievedKnowledgeList.innerHTML = '';
+          if (data.grounded_mode && data.retrieved_sources && data.retrieved_sources.length > 0) {
+            resRetrievedKnowledgeSection.classList.remove('hidden');
+            data.retrieved_sources.forEach(chunk => {
+              const card = document.createElement('div');
+              card.className = 'retrieved-chunk-card';
+              card.innerHTML = `
+                <div class="chunk-header">
+                  <span class="chunk-source">📄 <strong>${chunk.source_name}</strong> (Chunk #${chunk.chunk_id})</span>
+                  <span class="chunk-score-badge">Similarity: ${Number(chunk.score).toFixed(4)}</span>
+                </div>
+                <div class="chunk-preview">"${chunk.preview}"</div>
+              `;
+              resRetrievedKnowledgeList.appendChild(card);
+            });
+          } else {
+            resRetrievedKnowledgeSection.classList.add('hidden');
+          }
         }
 
         // Agent Task List checklist

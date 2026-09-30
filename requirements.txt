@@ -4,3 +4,7 @@ python-docx
 groq
 python-dotenv
 pydantic
+pypdf
+python-multipart
+sentence-transformers
+faiss-cpu
