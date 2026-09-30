@@ -88,6 +88,20 @@ User Request + Source Documents / Direct Text
 
 ---
 
+## 📸 Application Interface & RAG Grounding Demo
+
+### Grounded Planning & Missing Information Handling
+The agent ingests source documents, outlines the document, and notes unspecified details (such as missing CEO, revenue, or employee counts) in assumptions rather than hallucinating:
+
+![RAG Grounded UI Overview](docs/images/rag_grounded_ui_overview.png)
+
+### Retrieved Knowledge Inspection & Real-Time Metrics
+Users can inspect the exact source chunks retrieved by FAISS with cosine similarity scores and monitor agent execution times:
+
+![RAG Retrieved Knowledge & Metrics](docs/images/rag_retrieved_knowledge_metrics.png)
+
+---
+
 ## 🔍 Educational Guide: Understanding the RAG Retrieval Pipeline
 
 ### 1. Chunking
